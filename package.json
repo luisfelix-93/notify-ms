@@ -1,0 +1,31 @@
+{
+  "name": "notify-ms",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/luisfelix-93/notify-ms.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/luisfelix-93/notify-ms/issues"
+  },
+  "homepage": "https://github.com/luisfelix-93/notify-ms#readme",
+  "description": "",
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.7.1",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "bullmq": "^5.61.0",
+    "express": "^5.1.0",
+    "socket.io": "^4.8.1"
+  }
+}
