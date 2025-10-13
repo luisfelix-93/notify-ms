@@ -74,6 +74,30 @@ A aplicação segue uma arquitetura baseada em eventos e filas para garantir o d
 
 A aplicação estará disponível em `http://localhost:4004`.
 
+### Rodando com Docker
+
+Para iniciar a aplicação com Docker, siga estes passos:
+
+1.  **Construa a imagem Docker:**
+
+    ```bash
+    docker build -t notify-ms .
+    ```
+
+2.  **Inicie o container:**
+
+    Certifique-se de que o Redis esteja em execução e acessível pela aplicação. Se o Redis estiver rodando em um container Docker na mesma rede, você pode usar o nome do container como host.
+
+    ```bash
+    docker run -d -p 4004:4004 --name notify-ms notify-ms
+    ```
+
+    Se o Redis estiver rodando localmente (fora de um container), você pode precisar configurar a rede do container para `host`:
+
+    ```bash
+    docker run -d --network host --name notify-ms notify-ms
+    ```
+
 ## Benchmark
 
 Para executar o teste de benchmark, que envia 1000 mensagens para a fila e mede o tempo total e a vazão, execute o seguinte comando:
