@@ -8,3 +8,5 @@ docker-compose.yml
 .idea
 coverage
 __tests__/
+PR_Summary.md
+jest.config.js

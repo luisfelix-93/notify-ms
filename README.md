@@ -15,6 +15,33 @@ Este microsserviço é responsável por receber notificações de conclusão de 
 - **BullMQ**
 - **Redis**
 
+## Arquitetura
+
+A aplicação segue uma arquitetura baseada em eventos e filas para garantir o desacoplamento e a escalabilidade.
+
+```
++-----------------+      +---------------------+      +--------------------+
+|   API Gateway   |----->|    Notify MS        |----->|       Redis        |
++-----------------+      | (este microsserviço)|      |      (BullMQ)      |
+                       +---------------------+      +--------------------+
+                                 |
+                                 | (WebSocket)
+                                 |
+                       +---------------------+
+                       |      Clientes       |
+                       +---------------------+
+```
+
+1.  **Fila de Notificações:** A aplicação utiliza o BullMQ com Redis para gerenciar uma fila de notificações chamada `notification-queue`. As mensagens são adicionadas a esta fila por outros serviços (por exemplo, o serviço que executa os testes de carga).
+
+2.  **Worker de Notificação:** O `NotificationWorker` é responsável por processar as mensagens da fila. Ele escuta por novos trabalhos na fila `notification-queue` e, quando um trabalho é recebido, ele o processa.
+
+3.  **Caso de Uso:** O worker invoca o `SendCompletionNotificationUseCase`, que contém a lógica de negócios para enviar a notificação.
+
+4.  **Serviço de WebSocket:** O caso de uso utiliza o `WebSocketNotificationService` para enviar a notificação para todos os clientes conectados via WebSocket.
+
+5.  **Clientes:** Os clientes (por exemplo, a interface do usuário do Load Tester) se conectam ao microsserviço via WebSocket e escutam o evento `push-notification` para receber as notificações em tempo real.
+
 ## Começando
 
 ### Pré-requisitos
@@ -25,35 +52,41 @@ Este microsserviço é responsável por receber notificações de conclusão de 
 
 ### Instalação
 
-1. Clone o repositório:
-   ```bash
-   git clone https://github.com/luisfelix-93/notify-ms.git
-   ```
-2. Instale as dependências:
-   ```bash
-   npm install
-   ```
+1.  Clone o repositório:
+    ```bash
+    git clone https://github.com/luisfelix-93/notify-ms.git
+    ```
+2.  Instale as dependências:
+    ```bash
+    npm install
+    ```
 
 ### Rodando a Aplicação
 
-1. Inicie o Redis com Docker:
-   ```bash
-   docker run -d --name redis -p 6379:6379 redis
-   ```
-2. Inicie a aplicação em modo de desenvolvimento:
-   ```bash
-   npm run dev
-   ```
+1.  Inicie o Redis com Docker:
+    ```bash
+    docker run -d --name redis -p 6379:6379 redis
+    ```
+2.  Inicie a aplicação em modo de desenvolvimento:
+    ```bash
+    npm run dev
+    ```
 
 A aplicação estará disponível em `http://localhost:4004`.
 
-## Como Funciona
+## Benchmark
 
-1. A aplicação recebe uma mensagem em uma fila do BullMQ chamada `notification-queue`.
-2. O `NotificationWorker` processa a mensagem da fila.
-3. O worker chama o `SendCompletionNotificationUseCase` para processar a notificação.
-4. O caso de uso utiliza o `WebSocketNotificationService` para enviar a notificação para os clientes conectados via WebSocket.
-5. Os clientes recebem a notificação através do evento `push-notification`.
+Para executar o teste de benchmark, que envia 1000 mensagens para a fila e mede o tempo total e a vazão, execute o seguinte comando:
+
+```bash
+npm run benchmark
+```
+
+O script irá:
+1. Conectar-se ao servidor WebSocket.
+2. Enviar 1000 mensagens para a fila `notification-queue`.
+3. Aguardar o recebimento de todas as notificações via WebSocket.
+4. Calcular e exibir o tempo total e a vazão (notificações por segundo).
 
 ## Endpoints da API
 
