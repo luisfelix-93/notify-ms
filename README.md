@@ -4,7 +4,7 @@ Microsserviço de notificação em tempo real para o projeto Load Tester.
 
 ## Descrição
 
-Este microsserviço é responsável por receber notificações de conclusão de testes de carga e enviá-las em tempo real para os clientes conectados via WebSocket. Ele utiliza uma fila para processar as notificações de forma assíncrona e garantir a entrega.
+Este microsserviço é responsável por receber notificações de conclusão de testes de carga e alertas de performance, e enviá-las em tempo real para os clientes conectados via WebSocket ou por e-mail. Ele utiliza filas para processar as notificações de forma assíncrona e garantir a entrega.
 
 ## Tecnologias Utilizadas
 
@@ -14,6 +14,7 @@ Este microsserviço é responsável por receber notificações de conclusão de 
 - **Socket.IO**
 - **BullMQ**
 - **Redis**
+- **Nodemailer**
 
 ## Arquitetura
 
@@ -24,23 +25,39 @@ A aplicação segue uma arquitetura baseada em eventos e filas para garantir o d
 |   API Gateway   |----->|    Notify MS        |----->|       Redis        |
 +-----------------+      | (este microsserviço)|      |      (BullMQ)      |
                        +---------------------+      +--------------------+
-                                 |
-                                 | (WebSocket)
-                                 |
-                       +---------------------+
-                       |      Clientes       |
-                       +---------------------+
+                                 |   ^
+              (WebSocket)        |   | (E-mail)
+                                 v   |
+                       +---------------------+      +--------------------+
+                       |      Clientes       |      | Servidor de E-mail |
+                       +---------------------+      +--------------------+
 ```
 
-1.  **Fila de Notificações:** A aplicação utiliza o BullMQ com Redis para gerenciar uma fila de notificações chamada `notification-queue`. As mensagens são adicionadas a esta fila por outros serviços (por exemplo, o serviço que executa os testes de carga).
+1.  **Filas:** A aplicação utiliza o BullMQ com Redis para gerenciar duas filas:
+    *   `notification-queue`: Para notificações de conclusão de testes.
+    *   `alert-queue`: Para notificações de alertas de performance.
 
-2.  **Worker de Notificação:** O `NotificationWorker` é responsável por processar as mensagens da fila. Ele escuta por novos trabalhos na fila `notification-queue` e, quando um trabalho é recebido, ele o processa.
+2.  **Workers:**
+    *   `NotificationWorker`: Processa as mensagens da `notification-queue`, invocando o `SendCompletionNotificationUseCase` para enviar notificações via WebSocket.
+    *   `AlertWorker`: Processa as mensagens da `alert-queue`, invocando o `SendAlertNotificationUseCase` para enviar alertas por e-mail.
 
-3.  **Caso de Uso:** O worker invoca o `SendCompletionNotificationUseCase`, que contém a lógica de negócios para enviar a notificação.
+3.  **Casos de Uso:**
+    *   `SendCompletionNotificationUseCase`: Contém a lógica de negócios para enviar a notificação de conclusão de teste.
+    *   `SendAlertNotificationUseCase`: Contém a lógica de negócios para enviar a notificação de alerta.
 
-4.  **Serviço de WebSocket:** O caso de uso utiliza o `WebSocketNotificationService` para enviar a notificação para todos os clientes conectados via WebSocket.
+4.  **Serviços de Notificação:**
+    *   `WebSocketNotificationService`: Envia notificações para todos os clientes conectados via WebSocket.
+    *   `EmailNotificationService`: Envia notificações por e-mail utilizando o Nodemailer.
 
 5.  **Clientes:** Os clientes (por exemplo, a interface do usuário do Load Tester) se conectam ao microsserviço via WebSocket e escutam o evento `push-notification` para receber as notificações em tempo real.
+
+## Variáveis de Ambiente
+
+Para o envio de e-mails, as seguintes variáveis de ambiente podem ser configuradas:
+- `EMAIL_HOST`: Host do servidor SMTP. (Padrão: `smtp.ethereal.email`)
+- `EMAIL_PORT`: Porta do servidor SMTP. (Padrão: `587`)
+- `EMAIL_USER`: Usuário para autenticação no servidor SMTP.
+- `EMAIL_PASSWORD`: Senha para autenticação no servidor SMTP.
 
 ## Começando
 
@@ -100,7 +117,7 @@ Para iniciar a aplicação com Docker, siga estes passos:
 
 ## Benchmark
 
-Para executar o teste de benchmark, que envia 1000 mensagens para a fila e mede o tempo total e a vazão, execute o seguinte comando:
+Para executar o teste de benchmark, que envia 2000 mensagens (1000 para cada fila) e mede o tempo total e a vazão da fila de notificação, execute o seguinte comando:
 
 ```bash
 npm run benchmark
@@ -108,8 +125,8 @@ npm run benchmark
 
 O script irá:
 1. Conectar-se ao servidor WebSocket.
-2. Enviar 1000 mensagens para a fila `notification-queue`.
-3. Aguardar o recebimento de todas as notificações via WebSocket.
+2. Enviar 1000 mensagens para a fila `notification-queue` e 1000 para a `alert-queue`.
+3. Aguardar o recebimento de 1000 notificações via WebSocket (da `notification-queue`).
 4. Calcular e exibir o tempo total e a vazão (notificações por segundo).
 
 ## Endpoints da API
