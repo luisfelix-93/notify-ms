@@ -1,0 +1,18 @@
+# Git
+.git
+.github
+.gitignore
+
+# Node
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Build output
+dist
+.tsbuildinfo
+
+# Misc
+.env
+benchmark.ts
+README.md

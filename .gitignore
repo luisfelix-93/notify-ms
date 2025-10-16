@@ -1,0 +1,12 @@
+node_modules
+dist
+npm-debug.log
+docker-compose.yml
+.env
+.git
+.vscode
+.idea
+coverage
+__tests__/
+PR_Summary.md
+jest.config.js
