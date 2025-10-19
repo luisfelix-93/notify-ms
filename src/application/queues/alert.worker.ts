@@ -17,7 +17,7 @@ export class AlertWorker {
     }
 
     private async processJob(job: Job<EmailNotificationPayload>): Promise<void> {
-        console.log(`[AlertWorker] Job de alertta ${job.id} recebido.`, job.data);
+        console.log(`[AlertWorker] Job de alerta ${job.id} recebido.`, job.data);
         try {
             await this.useCase.execute(job.data);
         } catch (error) {

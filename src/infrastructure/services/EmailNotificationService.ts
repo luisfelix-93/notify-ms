@@ -1,14 +1,15 @@
 import { EmailNotificationPayload, IEmailNotificationService } from "../../domain/services/INotificationService";
 import * as nodemailer from 'nodemailer';
+import * as dotenv from 'dotenv';
+dotenv.config();
 
 export class EmailNotificationService implements IEmailNotificationService {
     private transporter: nodemailer.Transporter;
 
     constructor() {
         this.transporter = nodemailer.createTransport({
-            host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
-            port: parseInt(process.env.EMAIL_PORT || '587', 10),
-            auth: {
+            service: "gmail",
+            auth:{
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASSWORD
             }
@@ -17,9 +18,8 @@ export class EmailNotificationService implements IEmailNotificationService {
 
     async send(payload: EmailNotificationPayload): Promise<void> {
         console.log(`[EmailService] Enviando alerta por e-mail para ${payload.recipientEmail}`);
-
         const mailOptions = {
-            from: '"Sistema de Monitoramento" <monitor@support.io>',
+            from: `Sistema de Monitoramento" <${process.env.EMAIL_USER}}>`,
             to: payload.recipientEmail,
             subject: `🚨 Alerta: Problema no endpoint ${payload.endpointName}`,
             html: `
