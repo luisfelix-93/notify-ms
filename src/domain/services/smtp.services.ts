@@ -1,23 +1,39 @@
-import { decrypt, encrypt } from "../../infrastructure/lib/crypto";
+import { SmtpConfigModel, ISmtpConfig } from '../models/smtp.model';
+import { encrypt, decrypt } from '../../infrastructure/lib/crypto';
 import nodemailer from 'nodemailer';
-import { ISmtpConfig, SmtpConfigModel } from "../models/smtp.model";
 
-export async function saveConfig(data: Omit<ISmtpConfig, 'pass'> & { pass: string}) {
-    const { configId = 'default', host, port, secure, user, pass} = data;
+export async function saveConfig(data: Omit<ISmtpConfig, 'pass'> & { pass: string }) {
+    const { configId = 'default', host, port, secure, user, pass } = data;
+    const encryptedPass = encrypt(pass);
 
-    const config = await SmtpConfigModel.findByIdAndUpdate(
-        { configId },
-        { host, port, secure, user, pass: encrypt(pass) },
-        { new: true, upsert: true },
-    );
+    const updatePayload = {
+        $set: {
+            host,
+            port,
+            secure,
+            user,
+            pass: encryptedPass
+        }
+    };
 
-    return config;
+    try {
+        const config = await SmtpConfigModel.findOneAndUpdate(
+            { configId },      // Query: Encontre pelo configId
+            updatePayload,     // Update: Use $set para atualizar os campos
+            { new: true, upsert: true } // Options: Retorne o novo doc, crie se não existir
+        );
+        console.log("Configuração SMTP guardada/atualizada:", config);
+        return config;
+    } catch (error) {
+        console.error("Erro detalhado ao guardar config SMTP:", error);
+        throw error; // Re-lança o erro para ser capturado pelo controller
+    }
 }
 
 export async function getConfig(configId: string = 'default'): Promise<ISmtpConfig | null> {
     const config = await SmtpConfigModel.findOne({ configId });
     if (config) {
-        config.pass = decrypt(config.pass);
+        config.pass = decrypt(config.pass); // Desencripta para uso
     }
     return config;
 }
