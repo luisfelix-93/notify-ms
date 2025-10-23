@@ -15,22 +15,25 @@ Este microsserviço é responsável por receber notificações de conclusão de 
 - **BullMQ**
 - **Redis**
 - **Nodemailer**
+- **MongoDB**
+- **Mongoose**
+- **crypto-js**
 
 ## Arquitetura
 
 A aplicação segue uma arquitetura baseada em eventos e filas para garantir o desacoplamento e a escalabilidade.
 
 ```
-+-----------------+      +---------------------+      +--------------------+
++-----------------+      +---------------------+      +--------------------
 |   API Gateway   |----->|    Notify MS        |----->|       Redis        |
 +-----------------+      | (este microsserviço)|      |      (BullMQ)      |
-                       +---------------------+      +--------------------+
+                       +---------------------+      +--------------------
                                  |   ^
               (WebSocket)        |   | (E-mail)
                                  v   |
-                       +---------------------+      +--------------------+
+                       +---------------------+      +--------------------
                        |      Clientes       |      | Servidor de E-mail |
-                       +---------------------+      +--------------------+
+                       +---------------------+      +--------------------
 ```
 
 1.  **Filas:** A aplicação utiliza o BullMQ com Redis para gerenciar duas filas:
@@ -47,17 +50,18 @@ A aplicação segue uma arquitetura baseada em eventos e filas para garantir o d
 
 4.  **Serviços de Notificação:**
     *   `WebSocketNotificationService`: Envia notificações para todos os clientes conectados via WebSocket.
-    *   `EmailNotificationService`: Envia notificações por e-mail utilizando o Nodemailer.
+    *   `EmailNotificationService`: Envia notificações por e-mail utilizando o Nodemailer, com configurações de SMTP dinâmicas.
 
 5.  **Clientes:** Os clientes (por exemplo, a interface do usuário do Load Tester) se conectam ao microsserviço via WebSocket e escutam o evento `push-notification` para receber as notificações em tempo real.
 
 ## Variáveis de Ambiente
 
-Para o envio de e-mails, as seguintes variáveis de ambiente podem ser configuradas:
-- `EMAIL_HOST`: Host do servidor SMTP. (Padrão: `smtp.ethereal.email`)
-- `EMAIL_PORT`: Porta do servidor SMTP. (Padrão: `587`)
-- `EMAIL_USER`: Usuário para autenticação no servidor SMTP.
-- `EMAIL_PASSWORD`: Senha para autenticação no servidor SMTP.
+Para a configuração da aplicação, as seguintes variáveis de ambiente podem ser configuradas:
+
+- `MONGO_URL`: URL de conexão do MongoDB. (Padrão: `mongodb://localhost:27017/notify-db`)
+- `REDIS_HOST`: Host do Redis. (Padrão: `localhost`)
+- `REDIS_PORT`: Porta do Redis. (Padrão: `6379`)
+- `SECRET_KEY`: Chave secreta para criptografar as senhas de SMTP.
 
 ## Começando
 
@@ -65,7 +69,7 @@ Para o envio de e-mails, as seguintes variáveis de ambiente podem ser configura
 
 - Node.js (v18 ou superior)
 - npm
-- Docker (para rodar o Redis)
+- Docker (para rodar o Redis e o MongoDB)
 
 ### Instalação
 
@@ -80,9 +84,10 @@ Para o envio de e-mails, as seguintes variáveis de ambiente podem ser configura
 
 ### Rodando a Aplicação
 
-1.  Inicie o Redis com Docker:
+1.  Inicie o Redis e o MongoDB com Docker:
     ```bash
     docker run -d --name redis -p 6379:6379 redis
+    docker run -d --name mongo -p 27017:27017 mongo
     ```
 2.  Inicie a aplicação em modo de desenvolvimento:
     ```bash
@@ -103,13 +108,13 @@ Para iniciar a aplicação com Docker, siga estes passos:
 
 2.  **Inicie o container:**
 
-    Certifique-se de que o Redis esteja em execução e acessível pela aplicação. Se o Redis estiver rodando em um container Docker na mesma rede, você pode usar o nome do container como host.
+    Certifique-se de que o Redis e o MongoDB estejam em execução e acessíveis pela aplicação. Se estiverem rodando em containers Docker na mesma rede, você pode usar o nome do container como host.
 
     ```bash
     docker run -d -p 4004:4004 --name notify-ms notify-ms
     ```
 
-    Se o Redis estiver rodando localmente (fora de um container), você pode precisar configurar a rede do container para `host`:
+    Se o Redis e o MongoDB estiverem rodando localmente (fora de um container), você pode precisar configurar a rede do container para `host`:
 
     ```bash
     docker run -d --network host --name notify-ms notify-ms
@@ -137,6 +142,65 @@ Retorna o status da aplicação.
 
 - **Status:** `200 OK`
 - **Body:** `ok`
+
+### Configuração de SMTP
+
+#### POST /smtp/config
+
+Salva ou atualiza a configuração de SMTP.
+
+- **Status:** `200 OK`
+- **Body (Request):**
+  ```json
+  {
+    "host": "smtp.example.com",
+    "port": 587,
+    "secure": false,
+    "user": "user@example.com",
+    "pass": "password"
+  }
+  ```
+- **Body (Response):**
+  ```json
+  {
+    "message": "Configuração guardada com sucesso!",
+    "id": "default"
+  }
+  ```
+
+#### GET /smtp/config
+
+Recupera a configuração de SMTP atual (sem a senha).
+
+- **Status:** `200 OK`
+- **Body (Response):**
+  ```json
+  {
+    "configId": "default",
+    "host": "smtp.example.com",
+    "port": 587,
+    "secure": false,
+    "user": "user@example.com"
+  }
+  ```
+
+#### POST /smtp/config/test
+
+Envia um e-mail de teste para verificar a configuração de SMTP.
+
+- **Status:** `200 OK`
+- **Body (Request):**
+  ```json
+  {
+    "recipientEmail": "test@example.com"
+  }
+  ```
+- **Body (Response):**
+  ```json
+  {
+    "message": "E-mail de teste enviado com sucesso para test@example.com."
+  }
+  ```
 
 ## Eventos WebSocket
 

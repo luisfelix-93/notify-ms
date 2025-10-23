@@ -6,6 +6,7 @@ export interface NotificationPayload {
 }
 export interface EmailNotificationPayload {
     recipientEmail: string;
+    configId: string;
     endpointName: string;
     endpointUrl: string;
     metric: string;
